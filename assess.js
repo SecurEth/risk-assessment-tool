@@ -1,3 +1,4 @@
+const _              = require('lodash')
 const SolidityParser = require('solidity-parser')
 const asciiTable     = require('ascii-table')
 
@@ -5,9 +6,9 @@ const asciiTable     = require('ascii-table')
 function main() {
 
   const contractFile = getFileFromArgs()
-  const rootNode     = SolidityParser.parseFile(contractFile())
+  const rootNode     = SolidityParser.parseFile(contractFile)
 
-  console.log(JSON.stringify(contract, null, ' '))
+  // console.log(JSON.stringify(rootNode, null, ' '))
 
   getContracts(rootNode).forEach((node) => {
     assessContract(node)
@@ -36,16 +37,20 @@ function getFileFromArgs() {
 
 function assessContract(node) {
 
+  const contractName = node.name
+
   const table = asciiTable
 
   const methods = getMethods(node)
 
   const riskMatrix = methods.map((methodNode) => {
-    methodName       : methodNode.name,
-    isPublic         : isPublicMethod(methodNode),
-    canModifyState   : canModifyState(methodNode),
-    hasExternalCalls : hasExternalCalls(methodNode),
-    isHandlingAssets : isHandlingAssets(methodNode),
+    return {
+     methodName       : methodNode.name,
+     isPublic         : isPublicMethod(methodNode, contractName),
+     canModifyState   : canModifyState(methodNode),
+     hasExternalCalls : hasExternalCalls(methodNode),
+     isHandlingAssets : isHandlingAssets(methodNode),
+   }
   })
 
   printTable(riskMatrix)
@@ -54,17 +59,20 @@ function assessContract(node) {
 
 
 
-function isPublicMethod(node) {
-  return node.modifiers.some(m => m.name === 'public')
+function isPublicMethod(node, contractName) {
+  return (
+    node.name !== contractName &&
+    node.modifiers.some(m => m.name === 'public')
+  )
 }
 
 
 
 function canModifyState(node) {
   return node.modifiers.every(m => (
-    m !== 'view' &&
-    m !== 'pure' &&
-    m !== 'constant'
+    m.name !== 'view' &&
+    m.name !== 'pure' &&
+    m.name !== 'constant'
   ))
 }
 
@@ -76,14 +84,30 @@ function hasExternalCalls(node) {
 
 
 
+function isHandlingAssets(node) {
+  return isCallingTransfer(node)
+}
+
+
+
 function isCallingTransfer(node) {
+
+  if (!node) {
+    return
+  }
+
+  let nodeBody = node.body
+  if (!Array.isArray(nodeBody)) {
+    nodeBody = [nodeBody]
+  }
+
   return (
     (
-      node.type === 'Identifier' &&
-      node.name === 'transfer'
+      node.type === 'ExpressionStatement' &&
+      _.get(node, 'expression.callee.property.name') === 'transfer'
     )
     ||
-    node.body.some(n => isCallingTransfer(n))
+    nodeBody.some(n => isCallingTransfer(n))
   )
 }
 
@@ -101,7 +125,7 @@ function printTable(matrix) {
 
 
 
-function getAllMethods(rootNode) {
+function getMethods(rootNode) {
   return rootNode.body.filter((node) => node.type === 'FunctionDeclaration')
 }
 
