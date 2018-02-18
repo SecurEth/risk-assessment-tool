@@ -1,6 +1,6 @@
 const _              = require('lodash')
 const SolidityParser = require('solidity-parser')
-const asciiTable     = require('ascii-table')
+const AsciiTable     = require('ascii-table')
 
 
 function main() {
@@ -8,10 +8,9 @@ function main() {
   const contractFile = getFileFromArgs()
   const rootNode     = SolidityParser.parseFile(contractFile)
 
-  // console.log(JSON.stringify(rootNode, null, ' '))
-
   getContracts(rootNode).forEach((node) => {
-    assessContract(node)
+    const riskMatrix = assessContract(node)
+    printTable(riskMatrix, node.name)
   })
 
 }
@@ -39,8 +38,6 @@ function assessContract(node) {
 
   const contractName = node.name
 
-  const table = asciiTable
-
   const methods = getMethods(node)
 
   const riskMatrix = methods.map((methodNode) => {
@@ -53,7 +50,7 @@ function assessContract(node) {
    }
   })
 
-  printTable(riskMatrix)
+  return riskMatrix
 
 }
 
@@ -113,10 +110,48 @@ function isCallingTransfer(node) {
 
 
 
-function printTable(matrix) {
-  console.log(JSON.stringify(matrix, null, ' '))
+function printTable(matrix, contractName) {
+
+  const table = new AsciiTable(contractName)
+
+  table.setHeading('Method Name', 'isPublic', 'canModifyState', 'hasExternalCalls', 'isHandlingAssets', 'Risk')
+
+  matrix.forEach((m) => {
+    table.addRow(m.methodName, m.isPublic, m.canModifyState, m.hasExternalCalls, m.isHandlingAssets, getRisk(m))
+  })
+
+  console.log(table.toString())
+
 }
 
+
+
+function getRisk({ isPublic, canModifyState, hasExternalCalls, isHandlingAssets }) {
+
+
+  const severity = hasExternalCalls + canModifyState + isHandlingAssets
+
+  const likelihood = isPublic * 3
+
+  const risk = likelihood * severity
+
+  if (risk === 9) {
+    return 'Critical'
+  }
+  else if (risk >= 6) {
+    return 'High'
+  }
+  else if (risk >= 3) {
+    return 'Medium'
+  }
+  else if (risk >= 2) {
+    return 'Low'
+  }
+  else {
+    return 'Safe'
+  }
+
+}
 
 
 /////////////

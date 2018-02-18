@@ -3,7 +3,7 @@ pragma solidity ^0.4.18;
 import "node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 
 
-contract Sample {
+contract SampleContract {
   using SafeMath for uint256;
 
   // address where funds are store
@@ -15,7 +15,7 @@ contract Sample {
   // number of upvotes
   uint256 public upvoteCount;
 
-  function Sample(address _wallet) public {
+  function SampleContract(address _wallet) public {
     require(_wallet != address(0));
     wallet = _wallet;
   }
