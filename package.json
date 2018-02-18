@@ -1,0 +1,10 @@
+{
+  "name": "risk-assessment-tool",
+  "version": "0.0.1",
+  "repository": "https://github.com/SecurEth/risk-assessment-tool.git",
+  "author": "Roman Pavlovskyi <rpavlovskyi@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "solidity-parser": "^0.4.0"
+  }
+}
